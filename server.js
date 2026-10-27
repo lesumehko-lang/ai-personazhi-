@@ -2,7 +2,19 @@
 import express from "express";
 
 const app = express();
-app.use(express.json());
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "https://lesumehko-lang.github.io");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  next();
+});
+
+app.use(express.json({ limit: "10kb" }));
 
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.GEMINI_API_KEY;
@@ -13,7 +25,7 @@ app.get("/", (req, res) => {
 
 app.post("/api/chat", async (req, res) => {
   try {
-    const message = String(req.body.message || "").trim();
+    const message = String(req.body?.message || "").trim();
 
     if (!message) {
       return res.status(400).json({ error: "Напиши сообщение." });
@@ -24,9 +36,7 @@ app.post("/api/chat", async (req, res) => {
     }
 
     if (!API_KEY) {
-      return res.status(500).json({
-        error: "Добавь GEMINI_API_KEY в настройках Render."
-      });
+      return res.status(500).json({ error: "Не настроен ключ Gemini в Render." });
     }
 
     const response = await fetch(
@@ -40,7 +50,7 @@ app.post("/api/chat", async (req, res) => {
         body: JSON.stringify({
           system_instruction: {
             parts: [{
-              text: "Ты Алекс, дружелюбный виртуальный персонаж. Общайся естественно на русском языке."
+              text: "Ты Алекс, дружелюбный виртуальный персонаж. Общайся на русском языке, естественно и доброжелательно."
             }]
           },
           contents: [{
@@ -56,14 +66,13 @@ app.post("/api/chat", async (req, res) => {
     if (!response.ok) {
       console.error("Gemini error:", data.error?.message || response.status);
       return res.status(502).json({
-        error: "Gemini не смог ответить. Проверь ключ и доступность модели."
+        error: "Gemini не ответил. Проверь ключ и доступность модели."
       });
     }
 
-    const reply =
-      data.candidates?.[0]?.content?.parts
-        ?.map(part => part.text || "")
-        .join("") || "Попробуй написать ещё раз.";
+    const reply = data.candidates?.[0]?.content?.parts
+      ?.map(part => part.text || "")
+      .join("") || "Попробуй написать ещё раз.";
 
     res.json({ reply });
   } catch (error) {
