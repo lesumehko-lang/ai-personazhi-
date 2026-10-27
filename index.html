@@ -1,0 +1,124 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#100d20">
+  <title>AI Персонажи</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #100d20;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+    header {
+      padding: 22px 16px;
+      background: #1b1530;
+      border-bottom: 1px solid #393052;
+    }
+    h1 { margin: 0; font-size: 25px; }
+    header p { color: #b9acd8; margin-bottom: 0; }
+    main { padding: 16px; max-width: 650px; margin: auto; }
+    .card {
+      background: #211a38;
+      border: 1px solid #41345d;
+      border-radius: 18px;
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+    .avatar { font-size: 48px; }
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 13px 18px;
+      background: #a78bfa;
+      color: #171027;
+      font-weight: bold;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    #chat {
+      height: 260px;
+      overflow-y: auto;
+      padding: 12px;
+      background: #151025;
+      border-radius: 12px;
+      margin: 12px 0;
+    }
+    .message { margin: 10px 0; line-height: 1.5; }
+    .user { color: #c4b5fd; }
+    input {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid #594879;
+      background: #151025;
+      color: white;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+    .muted { color: #b9acd8; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>✨ AI Персонажи</h1>
+    <p>Твой мир виртуальных персонажей</p>
+  </header>
+
+  <main>
+    <div class="card">
+      <div class="avatar">🤖</div>
+      <h2>Алекс</h2>
+      <p class="muted">Дружелюбный виртуальный собеседник</p>
+      <button onclick="chooseAlex()">Общаться с Алексом</button>
+    </div>
+
+    <div class="card">
+      <h2 id="chatTitle">💬 Чат</h2>
+      <div id="chat">
+        <div class="message">Алекс: Привет! Я Алекс. Давай познакомимся!</div>
+      </div>
+      <input id="message" placeholder="Напиши сообщение...">
+      <button onclick="sendMessage()">Отправить</button>
+      <p class="muted" id="status">Демонстрационный режим — ИИ пока не подключён.</p>
+    </div>
+  </main>
+
+  <script>
+    const chat = document.getElementById("chat");
+    const input = document.getElementById("message");
+
+    function chooseAlex() {
+      document.getElementById("chatTitle").textContent = "💬 Чат с Алексом";
+      input.focus();
+    }
+
+    function sendMessage() {
+      const text = input.value.trim();
+      if (!text) return;
+
+      const userMessage = document.createElement("div");
+      userMessage.className = "message user";
+      userMessage.textContent = "Ты: " + text;
+      chat.appendChild(userMessage);
+
+      const reply = document.createElement("div");
+      reply.className = "message";
+      reply.textContent =
+        "Алекс: Я пока демо-персонаж. Скоро мы подключим настоящий ИИ!";
+      chat.appendChild(reply);
+
+      input.value = "";
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    input.addEventListener("keydown", event => {
+      if (event.key === "Enter") sendMessage();
+    });
+  </script>
+</body>
+</html>
