@@ -2,101 +2,231 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#100d20">
-<title>AI Персонажи</title>
-<style>
-*{box-sizing:border-box}
-body{margin:0;background:#100d20;color:white;font-family:Arial,sans-serif}
-header{padding:22px 16px;background:#1b1530;border-bottom:1px solid #393052}
-h1{margin:0;font-size:25px}
-header p,.muted{color:#b9acd8}
-main{padding:16px;max-width:650px;margin:auto}
-.card{background:#211a38;border:1px solid #41345d;border-radius:18px;padding:18px;margin-bottom:14px}
-.avatar{font-size:48px}
-button{border:0;border-radius:12px;padding:13px 18px;background:#a78bfa;color:#171027;font-weight:bold;font-size:15px}
-#chat{height:300px;overflow-y:auto;padding:12px;background:#151025;border-radius:12px;margin:12px 0}
-.message{margin:10px 0;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
-.user{color:#c4b5fd}
-input{width:100%;padding:14px;border-radius:12px;border:1px solid #594879;background:#151025;color:white;font-size:16px;margin-bottom:10px}
-button:disabled{opacity:.5}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Персонажи</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #100b20;
+      color: #fff;
+      font-family: Arial, sans-serif;
+    }
+
+    main {
+      max-width: 700px;
+      margin: auto;
+    }
+
+    section {
+      background: #251b40;
+      border: 1px solid #45345e;
+      border-radius: 24px;
+      padding: 22px;
+      margin-bottom: 22px;
+    }
+
+    h1, h2 { color: #e1d3ff; }
+
+    p { line-height: 1.6; }
+
+    textarea, input, button {
+      width: 100%;
+      padding: 15px;
+      margin-top: 10px;
+      border-radius: 14px;
+      font: inherit;
+    }
+
+    textarea, input {
+      background: #130d22;
+      color: white;
+      border: 1px solid #a58bff;
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    button {
+      background: #aa8bff;
+      color: #1b1030;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: .6;
+      cursor: wait;
+    }
+
+    #chat {
+      background: #130d22;
+      border-radius: 15px;
+      padding: 15px;
+      min-height: 100px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    #result {
+      width: 100%;
+      margin-top: 18px;
+      border-radius: 16px;
+    }
+
+    .status {
+      color: #d3c5ff;
+      overflow-wrap: anywhere;
+    }
+
+    .message {
+      margin: 12px 0;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    a { color: #d3c5ff; }
+  </style>
 </head>
 <body>
-<header>
-<h1>✨ AI Персонажи</h1>
-<p>Твой мир виртуальных персонажей</p>
-</header>
 <main>
-<div class="card">
-<div class="avatar">🤖</div>
-<h2>Алекс</h2>
-<p class="muted">Дружелюбный виртуальный собеседник</p>
-<button id="choose">Общаться с Алексом</button>
-</div>
-<div class="card">
-<h2>💬 Чат с Алексом</h2>
-<div id="chat" aria-live="polite">
-<div class="message">Алекс: Привет! Я Алекс. Теперь попробуем общаться через настоящий ИИ!</div>
-</div>
-<form id="form">
-<input id="message" placeholder="Напиши сообщение..." maxlength="4000" autocomplete="off">
-<button id="send" type="submit">Отправить</button>
-</form>
-<p class="muted" id="status">Подключение к ИИ готово к проверке.</p>
-</div>
+  <section>
+    <h1>🐺 AI Персонажи</h1>
+    <p>Общайся с Алексом и создавай собственных фурри-персонажей!</p>
+  </section>
+
+  <section>
+    <h2>💬 Чат с Алексом</h2>
+    <div id="chat" aria-live="polite">
+      <div class="message">Алекс: Привет! Я Алекс. Давай общаться!</div>
+    </div>
+
+    <form id="chatForm">
+      <input id="message" maxlength="4000"
+        placeholder="Напиши сообщение..." required>
+      <button id="send" type="submit">Отправить</button>
+    </form>
+    <p id="chatStatus" class="status"></p>
+  </section>
+
+  <section>
+    <h2>🎨 Генератор фурри</h2>
+    <p>Опиши своего персонажа: животное, цвета, одежду, позу и фон.</p>
+
+    <form id="imageForm">
+      <textarea id="description" maxlength="800"
+        placeholder="Например: серый волк с голубыми глазами, в фиолетовой толстовке, стоит в неоновом городе ночью..."
+        required></textarea>
+      <button id="generate" type="submit">🐾 Создать фурри</button>
+    </form>
+
+    <p id="imageStatus" class="status" aria-live="polite"></p>
+    <img id="result" alt="Созданный фурри-персонаж" hidden>
+    <p id="downloadArea" hidden>
+      <a id="download" download="my-furry.png">Сохранить картинку</a>
+    </p>
+  </section>
 </main>
+
 <script>
-const API = "https://ai-personazhi-1.onrender.com/api/chat";
-const chat = document.getElementById("chat");
-const input = document.getElementById("message");
-const form = document.getElementById("form");
-const send = document.getElementById("send");
-const statusText = document.getElementById("status");
+  const API = "https://ai-personazhi-1.onrender.com";
 
-function addMessage(name, text, className="message") {
-  const div = document.createElement("div");
-  div.className = className;
-  div.textContent = name + ": " + text;
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
-}
+  const chat = document.querySelector("#chat");
+  const chatForm = document.querySelector("#chatForm");
+  const message = document.querySelector("#message");
+  const send = document.querySelector("#send");
+  const chatStatus = document.querySelector("#chatStatus");
 
-document.getElementById("choose").addEventListener("click", () => {
-  input.focus();
-});
+  const imageForm = document.querySelector("#imageForm");
+  const description = document.querySelector("#description");
+  const generate = document.querySelector("#generate");
+  const imageStatus = document.querySelector("#imageStatus");
+  const result = document.querySelector("#result");
+  const download = document.querySelector("#download");
+  const downloadArea = document.querySelector("#downloadArea");
 
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const message = input.value.trim();
-  if (!message || send.disabled) return;
-
-  addMessage("Ты", message, "message user");
-  input.value = "";
-  send.disabled = true;
-  statusText.textContent = "Алекс думает…";
-
-  try {
-    const response = await fetch(API, {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({message})
-    });
-
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "Ошибка сервера");
-
-    addMessage("Алекс", data.reply || "Попробуй написать ещё раз.");
-    statusText.textContent = "ИИ подключён";
-  } catch (error) {
-    addMessage("Система", error.message || "Не удалось связаться с сервером.");
-    statusText.textContent = "Не удалось получить ответ";
-  } finally {
-    send.disabled = false;
-    input.focus();
+  function addMessage(who, text) {
+    const div = document.createElement("div");
+    div.className = "message";
+    div.textContent = who + ": " + text;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
   }
-});
+
+  chatForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const text = message.value.trim();
+    if (!text) return;
+
+    addMessage("Ты", text);
+    message.value = "";
+    send.disabled = true;
+    chatStatus.textContent = "Алекс думает...";
+
+    try {
+      const response = await fetch(API + "/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text })
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Ошибка чата");
+
+      addMessage("Алекс", data.reply || "Попробуй ещё раз.");
+      chatStatus.textContent = "";
+    } catch (error) {
+      chatStatus.textContent = error.message || "Не удалось получить ответ.";
+    } finally {
+      send.disabled = false;
+    }
+  });
+
+  imageForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const text = description.value.trim();
+    if (!text) return;
+
+    generate.disabled = true;
+    imageStatus.textContent = "🎨 Создаём персонажа... Это может занять время.";
+    result.hidden = true;
+    downloadArea.hidden = true;
+
+    try {
+      const response = await fetch(API + "/api/image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: text })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Не удалось создать картинку.");
+      }
+
+      if (!data.image) throw new Error("Сервер не вернул изображение.");
+
+      const mime = data.mimeType || "image/png";
+      const url = "data:" + mime + ";base64," + data.image;
+
+      result.src = url;
+      result.hidden = false;
+      download.href = url;
+      download.download = mime.includes("jpeg") ? "my-furry.jpg" : "my-furry.png";
+      downloadArea.hidden = false;
+      imageStatus.textContent = "Готово! Твой персонаж создан 🐺";
+    } catch (error) {
+      imageStatus.textContent = error.message || "Ошибка генерации. Попробуй позже.";
+    } finally {
+      generate.disabled = false;
+    }
+  });
 </script>
 </body>
 </html>
