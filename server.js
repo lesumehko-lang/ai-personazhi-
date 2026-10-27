@@ -1,15 +1,11 @@
 
 import express from "express";
-import OpenAI from "openai";
 
 const app = express();
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
-
-const client = new OpenAI({
-  apiKey: process.env.AI_API_KEY
-});
+const API_KEY = process.env.GEMINI_API_KEY;
 
 app.get("/", (req, res) => {
   res.send("AI Персонажи: сервер работает!");
@@ -20,43 +16,62 @@ app.post("/api/chat", async (req, res) => {
     const message = String(req.body.message || "").trim();
 
     if (!message) {
-      return res.status(400).json({
-        error: "Напиши сообщение."
-      });
+      return res.status(400).json({ error: "Напиши сообщение." });
     }
 
     if (message.length > 4000) {
-      return res.status(400).json({
-        error: "Сообщение слишком длинное."
+      return res.status(400).json({ error: "Сообщение слишком длинное." });
+    }
+
+    if (!API_KEY) {
+      return res.status(500).json({
+        error: "Добавь GEMINI_API_KEY в настройках Render."
       });
     }
 
-    const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content:
-            "Ты Алекс, дружелюбный виртуальный персонаж. Общайся на русском языке, естественно, доброжелательно и безопасно."
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": API_KEY
         },
-        {
-          role: "user",
-          content: message
-        }
-      ]
-    });
+        body: JSON.stringify({
+          system_instruction: {
+            parts: [{
+              text: "Ты Алекс, дружелюбный виртуальный персонаж. Общайся естественно на русском языке."
+            }]
+          },
+          contents: [{
+            role: "user",
+            parts: [{ text: message }]
+          }]
+        })
+      }
+    );
 
-    res.json({
-      reply: response.choices[0].message.content
-    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("Gemini error:", data.error?.message || response.status);
+      return res.status(502).json({
+        error: "Gemini не смог ответить. Проверь ключ и доступность модели."
+      });
+    }
+
+    const reply =
+      data.candidates?.[0]?.content?.parts
+        ?.map(part => part.text || "")
+        .join("") || "Попробуй написать ещё раз.";
+
+    res.json({ reply });
   } catch (error) {
-    console.error("Ошибка ИИ:", error.message);
-    res.status(500).json({
-      error: "Не удалось получить ответ от ИИ. Проверь настройки сервера."
-    });
+    console.error("Chat error:", error.message);
+    res.status(500).json({ error: "Ошибка сервера. Попробуй позже." });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Сервер запущен на порту ${PORT}`);
+  console.log(`AI Персонажи запущен на порту ${PORT}`);
 });
