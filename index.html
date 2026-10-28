@@ -2,231 +2,218 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AI Персонажи</title>
-  <style>
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      padding: 20px;
-      background: #100b20;
-      color: #fff;
-      font-family: Arial, sans-serif;
-    }
-
-    main {
-      max-width: 700px;
-      margin: auto;
-    }
-
-    section {
-      background: #251b40;
-      border: 1px solid #45345e;
-      border-radius: 24px;
-      padding: 22px;
-      margin-bottom: 22px;
-    }
-
-    h1, h2 { color: #e1d3ff; }
-
-    p { line-height: 1.6; }
-
-    textarea, input, button {
-      width: 100%;
-      padding: 15px;
-      margin-top: 10px;
-      border-radius: 14px;
-      font: inherit;
-    }
-
-    textarea, input {
-      background: #130d22;
-      color: white;
-      border: 1px solid #a58bff;
-    }
-
-    textarea {
-      min-height: 100px;
-      resize: vertical;
-    }
-
-    button {
-      background: #aa8bff;
-      color: #1b1030;
-      border: none;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    button:disabled {
-      opacity: .6;
-      cursor: wait;
-    }
-
-    #chat {
-      background: #130d22;
-      border-radius: 15px;
-      padding: 15px;
-      min-height: 100px;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-    }
-
-    #result {
-      width: 100%;
-      margin-top: 18px;
-      border-radius: 16px;
-    }
-
-    .status {
-      color: #d3c5ff;
-      overflow-wrap: anywhere;
-    }
-
-    .message {
-      margin: 12px 0;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-    }
-
-    a { color: #d3c5ff; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI Персонажи</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#100b20;color:#fff;font-family:Arial,sans-serif}
+header{padding:20px;background:#211638;border-bottom:1px solid #45345e}
+header h1{margin:0;color:#e1d3ff}
+header p{margin-bottom:0;color:#c8b8e9}
+main{max-width:900px;margin:auto;padding:16px}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+button{background:#aa8bff;color:#1b1030;border:0;padding:12px 16px;border-radius:12px;font-weight:bold;cursor:pointer}
+nav button{flex:1}
+button:disabled{opacity:.6}
+section,.panel{background:#251b40;border:1px solid #45345e;border-radius:18px;padding:18px;margin-bottom:16px}
+h2{color:#e1d3ff;margin-top:0}
+input,textarea{width:100%;padding:13px;margin:7px 0 12px;background:#130d22;color:white;border:1px solid #a58bff;border-radius:12px;font:inherit}
+textarea{min-height:90px;resize:vertical}
+.hidden{display:none!important}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.character{background:#180f2a;border:1px solid #5b457d;border-radius:16px;padding:15px}
+.avatar{font-size:42px}
+.character p,.muted{color:#cdbfe6;line-height:1.5}
+.character button{width:100%;margin-top:8px}
+#messages{height:320px;overflow-y:auto;background:#130d22;border-radius:14px;padding:12px;margin-bottom:12px}
+.msg{padding:11px 13px;margin:9px 0;border-radius:13px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45}
+.me{background:#45306a;margin-left:18px}
+.bot{background:#2d2143;margin-right:18px}
+.row{display:flex;gap:8px}
+.row input{flex:1;min-width:0}
+.row button{align-self:stretch}
+.small{font-size:13px;color:#cdbfe6}
+a{color:#d3c5ff}
+#result{width:100%;border-radius:14px;margin-top:12px}
+</style>
 </head>
 <body>
+<header>
+<h1>🐺 AI Персонажи</h1>
+<p>Создавай героев и общайся с ними</p>
+</header>
 <main>
-  <section>
-    <h1>🐺 AI Персонажи</h1>
-    <p>Общайся с Алексом и создавай собственных фурри-персонажей!</p>
-  </section>
+<nav>
+<button onclick="showPage('catalog')">📚 Каталог</button>
+<button onclick="showPage('create')">✨ Создать героя</button>
+<button onclick="showPage('history')">💬 Мои чаты</button>
+<button onclick="showPage('art')">🎨 Фурри</button>
+</nav>
 
-  <section>
-    <h2>💬 Чат с Алексом</h2>
-    <div id="chat" aria-live="polite">
-      <div class="message">Алекс: Привет! Я Алекс. Давай общаться!</div>
-    </div>
+<section id="catalog">
+<h2>📚 Выбери персонажа</h2>
+<p class="muted">У каждого героя своя история переписки.</p>
+<div id="cards" class="cards"></div>
+</section>
 
-    <form id="chatForm">
-      <input id="message" maxlength="4000"
-        placeholder="Напиши сообщение..." required>
-      <button id="send" type="submit">Отправить</button>
-    </form>
-    <p id="chatStatus" class="status"></p>
-  </section>
+<section id="create" class="hidden">
+<h2>✨ Создай своего персонажа</h2>
+<form id="createForm">
+<label>Имя персонажа</label>
+<input id="charName" maxlength="40" placeholder="Например, Луна" required>
+<label>Эмодзи персонажа</label>
+<input id="charEmoji" maxlength="8" value="🐺">
+<label>Характер и описание</label>
+<textarea id="charDesc" maxlength="800" placeholder="Например: дружелюбный волк, любит приключения и шутки." required></textarea>
+<button type="submit">Создать персонажа</button>
+</form>
+</section>
 
-  <section>
-    <h2>🎨 Генератор фурри</h2>
-    <p>Опиши своего персонажа: животное, цвета, одежду, позу и фон.</p>
+<section id="chatPage" class="hidden">
+<button onclick="showPage('catalog')">← К персонажам</button>
+<h2 id="chatTitle">Чат</h2>
+<p id="chatDescription" class="muted"></p>
+<div id="messages" aria-live="polite"></div>
+<form id="chatForm">
+<div class="row">
+<input id="message" maxlength="4000" placeholder="Напиши сообщение..." required>
+<button id="send" type="submit">➤</button>
+</div>
+</form>
+<p id="chatStatus" class="small"></p>
+<button id="clearChat">Очистить этот чат</button>
+</section>
 
-    <form id="imageForm">
-      <textarea id="description" maxlength="800"
-        placeholder="Например: серый волк с голубыми глазами, в фиолетовой толстовке, стоит в неоновом городе ночью..."
-        required></textarea>
-      <button id="generate" type="submit">🐾 Создать фурри</button>
-    </form>
+<section id="history" class="hidden">
+<h2>💬 Мои чаты</h2>
+<div id="historyList" class="cards"></div>
+</section>
 
-    <p id="imageStatus" class="status" aria-live="polite"></p>
-    <img id="result" alt="Созданный фурри-персонаж" hidden>
-    <p id="downloadArea" hidden>
-      <a id="download" download="my-furry.png">Сохранить картинку</a>
-    </p>
-  </section>
+<section id="art" class="hidden">
+<h2>🎨 Генератор фурри</h2>
+<p class="muted">Генерация изображения зависит от доступности и лимитов Gemini.</p>
+<form id="imageForm">
+<textarea id="description" maxlength="800" placeholder="Опиши своего персонажа..." required></textarea>
+<button id="generate" type="submit">Создать фурри</button>
+</form>
+<p id="imageStatus" class="small"></p>
+<img id="result" alt="Созданный персонаж" hidden>
+<p><a id="download" hidden download="my-furry.png">Сохранить картинку</a></p>
+</section>
 </main>
 
 <script>
-  const API = "https://ai-personazhi-1.onrender.com";
-
-  const chat = document.querySelector("#chat");
-  const chatForm = document.querySelector("#chatForm");
-  const message = document.querySelector("#message");
-  const send = document.querySelector("#send");
-  const chatStatus = document.querySelector("#chatStatus");
-
-  const imageForm = document.querySelector("#imageForm");
-  const description = document.querySelector("#description");
-  const generate = document.querySelector("#generate");
-  const imageStatus = document.querySelector("#imageStatus");
-  const result = document.querySelector("#result");
-  const download = document.querySelector("#download");
-  const downloadArea = document.querySelector("#downloadArea");
-
-  function addMessage(who, text) {
-    const div = document.createElement("div");
-    div.className = "message";
-    div.textContent = who + ": " + text;
-    chat.appendChild(div);
-    chat.scrollTop = chat.scrollHeight;
-  }
-
-  chatForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const text = message.value.trim();
-    if (!text) return;
-
-    addMessage("Ты", text);
-    message.value = "";
-    send.disabled = true;
-    chatStatus.textContent = "Алекс думает...";
-
-    try {
-      const response = await fetch(API + "/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text })
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Ошибка чата");
-
-      addMessage("Алекс", data.reply || "Попробуй ещё раз.");
-      chatStatus.textContent = "";
-    } catch (error) {
-      chatStatus.textContent = error.message || "Не удалось получить ответ.";
-    } finally {
-      send.disabled = false;
-    }
-  });
-
-  imageForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const text = description.value.trim();
-    if (!text) return;
-
-    generate.disabled = true;
-    imageStatus.textContent = "🎨 Создаём персонажа... Это может занять время.";
-    result.hidden = true;
-    downloadArea.hidden = true;
-
-    try {
-      const response = await fetch(API + "/api/image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: text })
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Не удалось создать картинку.");
-      }
-
-      if (!data.image) throw new Error("Сервер не вернул изображение.");
-
-      const mime = data.mimeType || "image/png";
-      const url = "data:" + mime + ";base64," + data.image;
-
-      result.src = url;
-      result.hidden = false;
-      download.href = url;
-      download.download = mime.includes("jpeg") ? "my-furry.jpg" : "my-furry.png";
-      downloadArea.hidden = false;
-      imageStatus.textContent = "Готово! Твой персонаж создан 🐺";
-    } catch (error) {
-      imageStatus.textContent = error.message || "Ошибка генерации. Попробуй позже.";
-    } finally {
-      generate.disabled = false;
-    }
-  });
+const API="https://ai-personazhi-1.onrender.com";
+const KEY="aiPersonazhiDataV1";
+const defaults=[
+{id:"alex",name:"Алекс",emoji:"🐺",desc:"Дружелюбный волк. Любит разговоры, приключения и шутки.",system:"Ты Алекс, дружелюбный виртуальный персонаж-волк. Отвечай по-русски, поддерживай беседу и оставайся в характере."},
+{id:"luna",name:"Луна",emoji:"🌙",desc:"Спокойная мечтательница, которая любит звёзды и истории.",system:"Ты Луна, добрая мечтательная героиня, которая любит звёзды и истории. Отвечай по-русски."},
+{id:"max",name:"Макс",emoji:"🦊",desc:"Весёлый лис, любитель игр и забавных идей.",system:"Ты Макс, весёлый дружелюбный лис, любишь игры и забавные идеи. Отвечай по-русски."}
+];
+function load(){
+try{
+const x=JSON.parse(localStorage.getItem(KEY));
+if(x&&Array.isArray(x.chars)&&x.chats)return x;
+}catch(e){}
+return {chars:defaults,chats:{}};
+}
+let state=load(),current=null,busy=false;
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){alert("Не удалось сохранить данные браузера. Возможно, закончилось место.");}}
+function safe(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function showPage(id){
+["catalog","create","chatPage","history","art"].forEach(x=>document.getElementById(x).classList.toggle("hidden",x!==id));
+if(id==="catalog")renderCards();
+if(id==="history")renderHistory();
+}
+function renderCards(){
+const root=document.getElementById("cards");root.replaceChildren();
+state.chars.forEach(ch=>{
+const card=document.createElement("div");card.className="character";
+const av=document.createElement("div");av.className="avatar";av.textContent=ch.emoji||"🐾";
+const h=document.createElement("h3");h.textContent=ch.name;
+const p=document.createElement("p");p.textContent=ch.desc;
+const b=document.createElement("button");b.textContent="Открыть чат";b.onclick=()=>openChat(ch.id);
+card.append(av,h,p,b);
+if(!defaults.some(d=>d.id===ch.id)){
+const del=document.createElement("button");del.textContent="Удалить героя";del.style.marginTop="8px";del.onclick=()=>{if(confirm("Удалить персонажа и его чат?")){state.chars=state.chars.filter(x=>x.id!==ch.id);delete state.chats[ch.id];save();renderCards();}};card.append(del);
+}
+root.append(card);
+});
+}
+function openChat(id){
+current=id;
+const ch=state.chars.find(x=>x.id===id);if(!ch)return;
+if(!state.chats[id])state.chats[id]=[];
+if(!state.chats[id].length)state.chats[id].push({who:"bot",text:"Привет! Я "+ch.name+". Давай знакомиться!"});
+document.getElementById("chatTitle").textContent=(ch.emoji||"🐾")+" Чат с "+ch.name;
+document.getElementById("chatDescription").textContent=ch.desc;
+renderMessages();save();showPage("chatPage");
+}
+function renderMessages(){
+const root=document.getElementById("messages");root.replaceChildren();
+(state.chats[current]||[]).forEach(m=>{
+const d=document.createElement("div");d.className="msg "+(m.who==="me"?"me":"bot");
+d.textContent=(m.who==="me"?"Ты":"Персонаж")+": "+m.text;root.append(d);
+});
+root.scrollTop=root.scrollHeight;
+}
+document.getElementById("createForm").addEventListener("submit",e=>{
+e.preventDefault();
+const name=document.getElementById("charName").value.trim();
+const desc=document.getElementById("charDesc").value.trim();
+const emoji=document.getElementById("charEmoji").value.trim()||"🐾";
+if(!name||!desc)return;
+const id="custom_"+Date.now();
+state.chars.push({id,name,emoji,desc,system:"Ты виртуальный персонаж по имени "+name+". Твоё описание и характер: "+desc+". Оставайся в роли персонажа, отвечай по-русски, дружелюбно и безопасно."});
+save();e.target.reset();document.getElementById("charEmoji").value="🐺";renderCards();openChat(id);
+});
+document.getElementById("chatForm").addEventListener("submit",async e=>{
+e.preventDefault();if(busy||!current)return;
+const input=document.getElementById("message"),text=input.value.trim();if(!text)return;
+const ch=state.chars.find(x=>x.id===current);if(!ch)return;
+state.chats[current].push({who:"me",text});save();renderMessages();input.value="";
+busy=true;document.getElementById("send").disabled=true;document.getElementById("chatStatus").textContent=ch.name+" думает...";
+try{
+const history=state.chats[current].slice(-16).map(m=>({role:m.who==="me"?"user":"model",parts:[{text:m.text}]}));
+const r=await fetch(API+"/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:text,history,character:{name:ch.name,description:ch.desc,instructions:ch.system}})});
+const data=await r.json();if(!r.ok)throw new Error(data.error||"Ошибка чата");
+state.chats[current].push({who:"bot",text:data.reply||"Попробуй ещё раз."});save();renderMessages();document.getElementById("chatStatus").textContent="";
+}catch(err){
+document.getElementById("chatStatus").textContent="Не удалось получить ответ: "+err.message;
+}finally{busy=false;document.getElementById("send").disabled=false;}
+});
+document.getElementById("clearChat").onclick=()=>{
+if(confirm("Очистить переписку с этим персонажем?")){
+state.chats[current]=[];save();openChat(current);
+}
+};
+function renderHistory(){
+const root=document.getElementById("historyList");root.replaceChildren();
+state.chars.forEach(ch=>{
+const msgs=state.chats[ch.id]||[];
+const card=document.createElement("div");card.className="character";
+const h=document.createElement("h3");h.textContent=(ch.emoji||"🐾")+" "+ch.name;
+const p=document.createElement("p");p.textContent=msgs.length?msgs[msgs.length-1].text:"Пока нет сообщений";
+const b=document.createElement("button");b.textContent="Продолжить чат";b.onclick=()=>openChat(ch.id);
+card.append(h,p,b);root.append(card);
+});
+}
+document.getElementById("imageForm").addEventListener("submit",async e=>{
+e.preventDefault();
+const text=document.getElementById("description").value.trim();if(!text)return;
+const btn=document.getElementById("generate"),status=document.getElementById("imageStatus");
+const img=document.getElementById("result"),link=document.getElementById("download");
+btn.disabled=true;status.textContent="Создаём изображение...";img.hidden=true;link.hidden=true;
+try{
+const r=await fetch(API+"/api/image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:text})});
+const d=await r.json();if(!r.ok)throw new Error(d.error||"Ошибка генерации");
+const url="data:"+(d.mimeType||"image/png")+";base64,"+d.image;
+img.src=url;img.hidden=false;link.href=url;link.hidden=false;status.textContent="Готово!";
+}catch(err){status.textContent=err.message||"Не удалось создать изображение.";}
+finally{btn.disabled=false;}
+});
+renderCards();
 </script>
 </body>
 </html>
