@@ -3,7 +3,12 @@ import express from "express";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
 const API_KEY = process.env.GEMINI_API_KEY;
+const SUPABASE_URL = (process.env.SUPABASE_URL || "")
+  .replace(/\/rest\/v1\/?$/, "")
+  .replace(/\/+$/, "");
+const SUPABASE_KEY = process.env.SUPABASE_SECRET_KEY;
 
 const MODELS = [
   "gemini-3.8-flash",
@@ -41,13 +46,148 @@ app.get("/", (req, res) => {
 });
 
 // =================================
+// SUPABASE: СОХРАНЕНИЕ СООБЩЕНИЙ
+// =================================
+
+function hasSupabase() {
+  return Boolean(SUPABASE_URL && SUPABASE_KEY);
+}
+
+async function saveMessages(rows) {
+  if (!hasSupabase()) {
+    console.error("Supabase не настроен в Render.");
+    return false;
+  }
+
+  try {
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/chat_messages`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${SUPABASE_KEY}`,
+          "Prefer": "return=minimal"
+        },
+        body: JSON.stringify(rows),
+        signal: AbortSignal.timeout(15000)
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(
+        "Supabase save error:",
+        response.status,
+        errorText.slice(0, 1000)
+      );
+      return false;
+    }
+
+    console.log("Сообщения сохранены в Supabase.");
+    return true;
+  } catch (error) {
+    console.error("Supabase connection error:", error.message);
+    return false;
+  }
+}
+
+// =================================
+// SUPABASE: ЗАГРУЗКА ИСТОРИИ
+// =================================
+
+app.get("/api/history", async (req, res) => {
+  try {
+    if (!hasSupabase()) {
+      return res.status(503).json({
+        error: "Supabase не настроен в Render."
+      });
+    }
+
+    const conversationId = String(
+      req.query.conversationId || ""
+    ).trim();
+
+    const characterName = String(
+      req.query.characterName || ""
+    ).trim();
+
+    if (
+      !conversationId ||
+      conversationId.length > 100 ||
+      !characterName ||
+      characterName.length > 40
+    ) {
+      return res.status(400).json({
+        error: "Нужны conversationId и characterName."
+      });
+    }
+
+    const params = new URLSearchParams({
+      select: "role,content,created_at",
+      conversation_id: `eq.${conversationId}`,
+      character_name: `eq.${characterName}`,
+      order: "created_at.asc",
+      limit: "100"
+    });
+
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/chat_messages?${params}`,
+      {
+        headers: {
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${SUPABASE_KEY}`
+        },
+        signal: AbortSignal.timeout(15000)
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(
+        "Supabase history error:",
+        response.status,
+        errorText.slice(0, 1000)
+      );
+
+      return res.status(502).json({
+        error: "Не удалось загрузить историю."
+      });
+    }
+
+    const rows = await response.json();
+
+    return res.json({
+      history: rows.map(row => ({
+        role: row.role,
+        parts: [{ text: row.content }]
+      }))
+    });
+  } catch (error) {
+    console.error("History error:", error.message);
+
+    return res.status(500).json({
+      error: "Ошибка загрузки истории."
+    });
+  }
+});
+
+// =================================
 // ЧАТ С ПЕРСОНАЖАМИ
 // =================================
 
 app.post("/api/chat", async (req, res) => {
   try {
-    const message = String(req.body?.message || "").trim();
+    const message = String(
+      req.body?.message || ""
+    ).trim();
+
     const character = req.body?.character || {};
+
+    const conversationId = String(
+      req.body?.conversationId || ""
+    ).trim();
 
     const history = Array.isArray(req.body?.history)
       ? req.body.history.slice(-16)
@@ -59,13 +199,24 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
+    if (
+      conversationId.length > 100
+    ) {
+      return res.status(400).json({
+        error: "Неверный идентификатор чата."
+      });
+    }
+
     if (!API_KEY) {
       return res.status(500).json({
         error: "Не настроен ключ Gemini в Render."
       });
     }
 
-    const name = String(character.name || "Алекс").slice(0, 40);
+    const name = String(
+      character.name || "Алекс"
+    ).slice(0, 40);
+
     const description = String(
       character.description || ""
     ).slice(0, 800);
@@ -121,12 +272,10 @@ app.post("/api/chat", async (req, res) => {
     let lastError = "";
 
     for (const model of MODELS) {
-      let response;
-
       try {
         console.log(`Пробуем модель: ${model}`);
 
-        response = await fetch(
+        const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
           {
             method: "POST",
@@ -165,29 +314,24 @@ app.post("/api/chat", async (req, res) => {
           lastError
         );
 
-        // Следующую модель пробуем только
-        // при перегрузке или ограничении запросов.
         if (
           response.status !== 429 &&
           response.status !== 503
         ) {
           break;
         }
-
       } catch (error) {
-        console.error(`Ошибка соединения ${model}:`, error);
+        console.error(
+          `Ошибка соединения ${model}:`,
+          error.message
+        );
 
-        lastError = error.cause
-          ? `${error.message}: ${error.cause.message}`
-          : error.message;
-
-        // При сетевой ошибке пробуем следующую модель.
-        continue;
+        lastError = error.message;
       }
     }
 
     if (lastError) {
-      console.error("Все попытки завершились ошибкой:", lastError);
+      console.error("Gemini error:", lastError);
 
       return res.status(502).json({
         error: "Gemini недоступен: " + lastError
@@ -205,8 +349,26 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
-    return res.json({ reply });
+    // Сохраняем оба сообщения, только если сайт
+    // передал идентификатор отдельной переписки.
+    if (conversationId && hasSupabase()) {
+      await saveMessages([
+        {
+          conversation_id: conversationId,
+          character_name: name,
+          role: "user",
+          content: message
+        },
+        {
+          conversation_id: conversationId,
+          character_name: name,
+          role: "model",
+          content: reply
+        }
+      ]);
+    }
 
+    return res.json({ reply });
   } catch (error) {
     console.error("Chat error:", error);
 
@@ -305,7 +467,6 @@ app.post("/api/image", async (req, res) => {
         imageData.mime_type ||
         "image/png"
     });
-
   } catch (error) {
     console.error("Image error:", error);
 
@@ -322,4 +483,4 @@ app.post("/api/image", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`AI Персонажи запущен на порту ${PORT}`);
 });
-        
+      
