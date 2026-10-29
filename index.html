@@ -43,6 +43,7 @@ a{color:#d3c5ff}
 <h1>🐺 AI Персонажи</h1>
 <p>Создавай героев и общайся с ними</p>
 </header>
+
 <main>
 <nav>
 <button onclick="showPage('catalog')">📚 Каталог</button>
@@ -106,114 +107,360 @@ a{color:#d3c5ff}
 <script>
 const API="https://ai-personazhi-1.onrender.com";
 const KEY="aiPersonazhiDataV1";
+
 const defaults=[
 {id:"alex",name:"Алекс",emoji:"🐺",desc:"Дружелюбный волк. Любит разговоры, приключения и шутки.",system:"Ты Алекс, дружелюбный виртуальный персонаж-волк. Отвечай по-русски, поддерживай беседу и оставайся в характере."},
 {id:"luna",name:"Луна",emoji:"🌙",desc:"Спокойная мечтательница, которая любит звёзды и истории.",system:"Ты Луна, добрая мечтательная героиня, которая любит звёзды и истории. Отвечай по-русски."},
 {id:"max",name:"Макс",emoji:"🦊",desc:"Весёлый лис, любитель игр и забавных идей.",system:"Ты Макс, весёлый дружелюбный лис, любишь игры и забавные идеи. Отвечай по-русски."}
 ];
+
 function load(){
-try{
-const x=JSON.parse(localStorage.getItem(KEY));
-if(x&&Array.isArray(x.chars)&&x.chats)return x;
-}catch(e){}
-return {chars:defaults,chats:{}};
+  try{
+    const x=JSON.parse(localStorage.getItem(KEY));
+    if(x&&Array.isArray(x.chars)&&x.chats)return x;
+  }catch(e){}
+  return {chars:defaults,chats:{}};
 }
+
 let state=load(),current=null,busy=false;
-function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){alert("Не удалось сохранить данные браузера. Возможно, закончилось место.");}}
-function safe(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+function getConversationId(characterId){
+  const key="aiPersonazhiConversation_"+characterId;
+  let id=localStorage.getItem(key);
+
+  if(!id){
+    id=crypto.randomUUID();
+    localStorage.setItem(key,id);
+  }
+
+  return id;
+}
+
+function save(){
+  try{
+    localStorage.setItem(KEY,JSON.stringify(state));
+  }catch(e){
+    alert("Не удалось сохранить данные браузера. Возможно, закончилось место.");
+  }
+}
+
+function safe(s){
+  return String(s).replace(/[&<>"']/g,c=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
+}
+
 function showPage(id){
-["catalog","create","chatPage","history","art"].forEach(x=>document.getElementById(x).classList.toggle("hidden",x!==id));
-if(id==="catalog")renderCards();
-if(id==="history")renderHistory();
+  ["catalog","create","chatPage","history","art"].forEach(x=>{
+    document.getElementById(x).classList.toggle("hidden",x!==id);
+  });
+  if(id==="catalog")renderCards();
+  if(id==="history")renderHistory();
 }
+
 function renderCards(){
-const root=document.getElementById("cards");root.replaceChildren();
-state.chars.forEach(ch=>{
-const card=document.createElement("div");card.className="character";
-const av=document.createElement("div");av.className="avatar";av.textContent=ch.emoji||"🐾";
-const h=document.createElement("h3");h.textContent=ch.name;
-const p=document.createElement("p");p.textContent=ch.desc;
-const b=document.createElement("button");b.textContent="Открыть чат";b.onclick=()=>openChat(ch.id);
-card.append(av,h,p,b);
-if(!defaults.some(d=>d.id===ch.id)){
-const del=document.createElement("button");del.textContent="Удалить героя";del.style.marginTop="8px";del.onclick=()=>{if(confirm("Удалить персонажа и его чат?")){state.chars=state.chars.filter(x=>x.id!==ch.id);delete state.chats[ch.id];save();renderCards();}};card.append(del);
+  const root=document.getElementById("cards");
+  root.replaceChildren();
+
+  state.chars.forEach(ch=>{
+    const card=document.createElement("div");
+    card.className="character";
+
+    const av=document.createElement("div");
+    av.className="avatar";
+    av.textContent=ch.emoji||"🐾";
+
+    const h=document.createElement("h3");
+    h.textContent=ch.name;
+
+    const p=document.createElement("p");
+    p.textContent=ch.desc;
+
+    const b=document.createElement("button");
+    b.textContent="Открыть чат";
+    b.onclick=()=>openChat(ch.id);
+
+    card.append(av,h,p,b);
+
+    if(!defaults.some(d=>d.id===ch.id)){
+      const del=document.createElement("button");
+      del.textContent="Удалить героя";
+      del.style.marginTop="8px";
+      del.onclick=()=>{
+        if(confirm("Удалить персонажа и его чат?")){
+          state.chars=state.chars.filter(x=>x.id!==ch.id);
+          delete state.chats[ch.id];
+          save();
+          renderCards();
+        }
+      };
+      card.append(del);
+    }
+
+    root.append(card);
+  });
 }
-root.append(card);
-});
+
+// Загружаем историю переписки с сервера.
+async function loadRemoteHistory(characterId,characterName){
+  const conversationId=getConversationId(characterId);
+
+  try{
+    const params=new URLSearchParams({
+      conversationId,
+      characterName
+    });
+
+    const response=await fetch(API+"/api/history?"+params.toString());
+    if(!response.ok)throw new Error("История пока недоступна");
+
+    const data=await response.json();
+    if(!Array.isArray(data.history)||!data.history.length)return;
+
+    // Не заменяем сообщения, если пользователь уже открыл другой чат.
+    if(current!==characterId)return;
+
+    const messages=data.history
+      .filter(m=>
+        (m.role==="user"||m.role==="model")&&
+        Array.isArray(m.parts)
+      )
+      .map(m=>({
+        who:m.role==="user"?"me":"bot",
+        text:String(m.parts[0]?.text||"")
+      }))
+      .filter(m=>m.text.trim());
+
+    if(messages.length){
+      state.chats[characterId]=messages;
+      save();
+      renderMessages();
+      document.getElementById("chatStatus").textContent=
+        "История загружена из базы.";
+    }
+  }catch(error){
+    console.warn("История Supabase:",error.message);
+    if(current===characterId){
+      document.getElementById("chatStatus").textContent=
+        "Показываем сохранённую историю устройства.";
+    }
+  }
 }
+
 function openChat(id){
-current=id;
-const ch=state.chars.find(x=>x.id===id);if(!ch)return;
-if(!state.chats[id])state.chats[id]=[];
-if(!state.chats[id].length)state.chats[id].push({who:"bot",text:"Привет! Я "+ch.name+". Давай знакомиться!"});
-document.getElementById("chatTitle").textContent=(ch.emoji||"🐾")+" Чат с "+ch.name;
-document.getElementById("chatDescription").textContent=ch.desc;
-renderMessages();save();showPage("chatPage");
+  current=id;
+
+  const ch=state.chars.find(x=>x.id===id);
+  if(!ch)return;
+
+  if(!state.chats[id])state.chats[id]=[];
+
+  if(!state.chats[id].length){
+    state.chats[id].push({
+      who:"bot",
+      text:"Привет! Я "+ch.name+". Давай знакомиться!"
+    });
+  }
+
+  document.getElementById("chatTitle").textContent=
+    (ch.emoji||"🐾")+" Чат с "+ch.name;
+  document.getElementById("chatDescription").textContent=ch.desc;
+  document.getElementById("chatStatus").textContent="Проверяем сохранённую историю...";
+
+  renderMessages();
+  save();
+  showPage("chatPage");
+
+  loadRemoteHistory(id,ch.name);
 }
+
 function renderMessages(){
-const root=document.getElementById("messages");root.replaceChildren();
-(state.chats[current]||[]).forEach(m=>{
-const d=document.createElement("div");d.className="msg "+(m.who==="me"?"me":"bot");
-d.textContent=(m.who==="me"?"Ты":"Персонаж")+": "+m.text;root.append(d);
-});
-root.scrollTop=root.scrollHeight;
+  const root=document.getElementById("messages");
+  root.replaceChildren();
+
+  (state.chats[current]||[]).forEach(m=>{
+    const d=document.createElement("div");
+    d.className="msg "+(m.who==="me"?"me":"bot");
+    d.textContent=(m.who==="me"?"Ты":"Персонаж")+": "+m.text;
+    root.append(d);
+  });
+
+  root.scrollTop=root.scrollHeight;
 }
+
 document.getElementById("createForm").addEventListener("submit",e=>{
-e.preventDefault();
-const name=document.getElementById("charName").value.trim();
-const desc=document.getElementById("charDesc").value.trim();
-const emoji=document.getElementById("charEmoji").value.trim()||"🐾";
-if(!name||!desc)return;
-const id="custom_"+Date.now();
-state.chars.push({id,name,emoji,desc,system:"Ты виртуальный персонаж по имени "+name+". Твоё описание и характер: "+desc+". Оставайся в роли персонажа, отвечай по-русски, дружелюбно и безопасно."});
-save();e.target.reset();document.getElementById("charEmoji").value="🐺";renderCards();openChat(id);
+  e.preventDefault();
+
+  const name=document.getElementById("charName").value.trim();
+  const desc=document.getElementById("charDesc").value.trim();
+  const emoji=document.getElementById("charEmoji").value.trim()||"🐾";
+
+  if(!name||!desc)return;
+
+  const id="custom_"+Date.now();
+
+  state.chars.push({
+    id,name,emoji,desc,
+    system:"Ты виртуальный персонаж по имени "+name+
+      ". Твоё описание и характер: "+desc+
+      ". Оставайся в роли персонажа, отвечай по-русски, дружелюбно и безопасно."
+  });
+
+  save();
+  e.target.reset();
+  document.getElementById("charEmoji").value="🐺";
+  renderCards();
+  openChat(id);
 });
+
 document.getElementById("chatForm").addEventListener("submit",async e=>{
-e.preventDefault();if(busy||!current)return;
-const input=document.getElementById("message"),text=input.value.trim();if(!text)return;
-const ch=state.chars.find(x=>x.id===current);if(!ch)return;
-state.chats[current].push({who:"me",text});save();renderMessages();input.value="";
-busy=true;document.getElementById("send").disabled=true;document.getElementById("chatStatus").textContent=ch.name+" думает...";
-try{
-const history=state.chats[current].slice(-16).map(m=>({role:m.who==="me"?"user":"model",parts:[{text:m.text}]}));
-const r=await fetch(API+"/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:text,history,character:{name:ch.name,description:ch.desc,instructions:ch.system}})});
-const data=await r.json();if(!r.ok)throw new Error(data.error||"Ошибка чата");
-state.chats[current].push({who:"bot",text:data.reply||"Попробуй ещё раз."});save();renderMessages();document.getElementById("chatStatus").textContent="";
-}catch(err){
-document.getElementById("chatStatus").textContent="Не удалось получить ответ: "+err.message;
-}finally{busy=false;document.getElementById("send").disabled=false;}
+  e.preventDefault();
+  if(busy||!current)return;
+
+  const input=document.getElementById("message");
+  const text=input.value.trim();
+  if(!text)return;
+
+  const ch=state.chars.find(x=>x.id===current);
+  if(!ch)return;
+
+  const characterId=current;
+  const conversationId=getConversationId(characterId);
+
+  state.chats[characterId].push({who:"me",text});
+  save();
+  renderMessages();
+  input.value="";
+
+  busy=true;
+  document.getElementById("send").disabled=true;
+  document.getElementById("chatStatus").textContent=ch.name+" думает...";
+
+  try{
+    const history=state.chats[characterId].slice(-16).map(m=>({
+      role:m.who==="me"?"user":"model",
+      parts:[{text:m.text}]
+    }));
+
+    const r=await fetch(API+"/api/chat",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        message:text,
+        history,
+        conversationId,
+        character:{
+          name:ch.name,
+          description:ch.desc,
+          instructions:ch.system
+        }
+      })
+    });
+
+    const data=await r.json();
+    if(!r.ok)throw new Error(data.error||"Ошибка чата");
+
+    state.chats[characterId].push({
+      who:"bot",
+      text:data.reply||"Попробуй ещё раз."
+    });
+
+    save();
+
+    if(current===characterId)renderMessages();
+
+    document.getElementById("chatStatus").textContent=
+      "Ответ получен. Сохранение в базе выполняется сервером.";
+  }catch(err){
+    document.getElementById("chatStatus").textContent=
+      "Не удалось получить ответ: "+err.message;
+  }finally{
+    busy=false;
+    document.getElementById("send").disabled=false;
+  }
 });
+
 document.getElementById("clearChat").onclick=()=>{
-if(confirm("Очистить переписку с этим персонажем?")){
-state.chats[current]=[];save();openChat(current);
-}
+  if(confirm("Очистить переписку с этим персонажем?")){
+    state.chats[current]=[];
+
+    // Создаём новый идентификатор, чтобы старая история
+    // из базы не загрузилась обратно в этот чат.
+    localStorage.removeItem("aiPersonazhiConversation_"+current);
+
+    save();
+    openChat(current);
+  }
 };
+
 function renderHistory(){
-const root=document.getElementById("historyList");root.replaceChildren();
-state.chars.forEach(ch=>{
-const msgs=state.chats[ch.id]||[];
-const card=document.createElement("div");card.className="character";
-const h=document.createElement("h3");h.textContent=(ch.emoji||"🐾")+" "+ch.name;
-const p=document.createElement("p");p.textContent=msgs.length?msgs[msgs.length-1].text:"Пока нет сообщений";
-const b=document.createElement("button");b.textContent="Продолжить чат";b.onclick=()=>openChat(ch.id);
-card.append(h,p,b);root.append(card);
-});
+  const root=document.getElementById("historyList");
+  root.replaceChildren();
+
+  state.chars.forEach(ch=>{
+    const msgs=state.chats[ch.id]||[];
+    const card=document.createElement("div");
+    card.className="character";
+
+    const h=document.createElement("h3");
+    h.textContent=(ch.emoji||"🐾")+" "+ch.name;
+
+    const p=document.createElement("p");
+    p.textContent=msgs.length
+      ?msgs[msgs.length-1].text
+      :"Пока нет сообщений на этом устройстве";
+
+    const b=document.createElement("button");
+    b.textContent="Продолжить чат";
+    b.onclick=()=>openChat(ch.id);
+
+    card.append(h,p,b);
+    root.append(card);
+  });
 }
+
 document.getElementById("imageForm").addEventListener("submit",async e=>{
-e.preventDefault();
-const text=document.getElementById("description").value.trim();if(!text)return;
-const btn=document.getElementById("generate"),status=document.getElementById("imageStatus");
-const img=document.getElementById("result"),link=document.getElementById("download");
-btn.disabled=true;status.textContent="Создаём изображение...";img.hidden=true;link.hidden=true;
-try{
-const r=await fetch(API+"/api/image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:text})});
-const d=await r.json();if(!r.ok)throw new Error(d.error||"Ошибка генерации");
-const url="data:"+(d.mimeType||"image/png")+";base64,"+d.image;
-img.src=url;img.hidden=false;link.href=url;link.hidden=false;status.textContent="Готово!";
-}catch(err){status.textContent=err.message||"Не удалось создать изображение.";}
-finally{btn.disabled=false;}
+  e.preventDefault();
+
+  const text=document.getElementById("description").value.trim();
+  if(!text)return;
+
+  const btn=document.getElementById("generate");
+  const status=document.getElementById("imageStatus");
+  const img=document.getElementById("result");
+  const link=document.getElementById("download");
+
+  btn.disabled=true;
+  status.textContent="Создаём изображение...";
+  img.hidden=true;
+  link.hidden=true;
+
+  try{
+    const r=await fetch(API+"/api/image",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({description:text})
+    });
+
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||"Ошибка генерации");
+
+    const url="data:"+(d.mimeType||"image/png")+";base64,"+d.image;
+
+    img.src=url;
+    img.hidden=false;
+    link.href=url;
+    link.hidden=false;
+    status.textContent="Готово!";
+  }catch(err){
+    status.textContent=err.message||"Не удалось создать изображение.";
+  }finally{
+    btn.disabled=false;
+  }
 });
+
 renderCards();
 </script>
 </body>
-</html>
+  </html>
+  
