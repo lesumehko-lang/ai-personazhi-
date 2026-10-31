@@ -186,11 +186,11 @@ label{display:block;color:#e1d3ff}
 <main>
 
 <nav>
-  <button onclick="showPage('catalog')">📚 Каталог</button>
-  <button onclick="showPage('create')">✨ Создать героя</button>
-  <button onclick="showPage('history')">💬 Мои чаты</button>
-  <button onclick="showPage('art')">🐾 Фурри</button>
-  <button onclick="showPage('aiArt')">🎨 ИИ-рисование</button>
+  <button type="button" onclick="showPage('catalog')">📚 Каталог</button>
+  <button type="button" onclick="showPage('create')">✨ Создать героя</button>
+  <button type="button" onclick="showPage('history')">💬 Мои чаты</button>
+  <button type="button" onclick="showPage('art')">🐾 Фурри</button>
+  <button type="button" onclick="showPage('aiArt')">🎨 ИИ-рисование</button>
 </nav>
 
 <section id="catalog">
@@ -327,7 +327,7 @@ label{display:block;color:#e1d3ff}
 </section>
 
 <section id="chatPage" class="hidden">
-  <button onclick="showPage('catalog')">← К персонажам</button>
+  <button type="button" onclick="showPage('catalog')">← К персонажам</button>
 
   <h2 id="chatTitle">Чат</h2>
   <p id="chatDescription" class="muted"></p>
@@ -342,7 +342,7 @@ label{display:block;color:#e1d3ff}
   </form>
 
   <p id="chatStatus" class="small"></p>
-  <button id="clearChat">Очистить этот чат</button>
+  <button type="button" id="clearChat">Очистить этот чат</button>
 </section>
 
 <section id="history" class="hidden">
@@ -408,17 +408,16 @@ function save(){
   try{
     localStorage.setItem(KEY,JSON.stringify(state));
   }catch(e){
-    alert("Не удалось сохранить данные браузера.");
+    console.warn("Не удалось сохранить данные:",e);
   }
 }
 
 function getConversationId(characterId){
   const key="aiPersonazhiConversation_"+characterId;
-
   let id=localStorage.getItem(key);
 
   if(!id){
-    id=crypto.randomUUID
+    id=window.crypto&&crypto.randomUUID
       ?crypto.randomUUID()
       :"conversation_"+Date.now()+"_"+Math.random();
 
@@ -639,7 +638,6 @@ document.getElementById("createForm")
   });
 
   save();
-
   e.target.reset();
 
   document.getElementById("charEmoji").value="🐺";
@@ -735,7 +733,6 @@ document.getElementById("furryForm")
   });
 
   save();
-
   e.target.reset();
   updatePreview();
   renderCards();
@@ -859,9 +856,4 @@ document.getElementById("chatForm")
 
   if(busy||!current)return;
 
-  const input=document.getElementById("message");
-  const text=input.value.trim();
-
-  if(!text)return;
-
-  const ch=state.chars.find(x=>x.
+  const input=document.getE
