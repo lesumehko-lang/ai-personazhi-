@@ -16,7 +16,8 @@ const MODELS = [
   "gemini-3.5-flash"
 ];
 
-const IMAGE_MODEL = "gemini-3.1-flash-image";
+// Модель генерации изображений
+const IMAGE_MODEL = "gemini-nano-banana-2.1";
 
 app.use((req, res, next) => {
   res.setHeader(
@@ -46,7 +47,7 @@ app.get("/", (req, res) => {
 });
 
 // =================================
-// SUPABASE: СОХРАНЕНИЕ СООБЩЕНИЙ
+// SUPABASE
 // =================================
 
 function hasSupabase() {
@@ -94,7 +95,7 @@ async function saveMessages(rows) {
 }
 
 // =================================
-// SUPABASE: ЗАГРУЗКА ИСТОРИИ
+// ЗАГРУЗКА ИСТОРИИ
 // =================================
 
 app.get("/api/history", async (req, res) => {
@@ -199,9 +200,7 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
-    if (
-      conversationId.length > 100
-    ) {
+    if (conversationId.length > 100) {
       return res.status(400).json({
         error: "Неверный идентификатор чата."
       });
@@ -349,8 +348,6 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
-    // Сохраняем оба сообщения, только если сайт
-    // передал идентификатор отдельной переписки.
     if (conversationId && hasSupabase()) {
       await saveMessages([
         {
@@ -379,7 +376,7 @@ app.post("/api/chat", async (req, res) => {
 });
 
 // =================================
-// ГЕНЕРАТОР ИЗОБРАЖЕНИЙ
+// ГЕНЕРАТОР ИЗОБРАЖЕНИЙ ФУРРИ
 // =================================
 
 app.post("/api/image", async (req, res) => {
@@ -411,7 +408,7 @@ app.post("/api/image", async (req, res) => {
     ].join(" ");
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent`,
+      `https://generativelanguage.googleapis.com/v1/models/${IMAGE_MODEL}:generateContent`,
       {
         method: "POST",
         headers: {
@@ -439,7 +436,8 @@ app.post("/api/image", async (req, res) => {
       );
 
       return res.status(502).json({
-        error: "Не удалось создать картинку."
+        error: "Не удалось создать картинку: " +
+          (data.error?.message || response.status)
       });
     }
 
@@ -468,19 +466,19 @@ app.post("/api/image", async (req, res) => {
         "image/png"
     });
   } catch (error) {
-    console.error("Image error:", error);
+    console.error("Image error:", error.message);
 
     return res.status(500).json({
-      error: "Ошибка генератора."
+      error: "Ошибка генератора: " + error.message
     });
   }
 });
 
 // =================================
-// ЗАПУСК
+// ЗАПУСК СЕРВЕРА
 // =================================
 
 app.listen(PORT, () => {
   console.log(`AI Персонажи запущен на порту ${PORT}`);
 });
-      
+        
