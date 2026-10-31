@@ -856,4 +856,102 @@ document.getElementById("chatForm")
 
   if(busy||!current)return;
 
-  const input=document.getE
+    const input=document.getElementById("message");
+  const message=input.value.trim();
+  if(!message)return;
+
+  const ch=state.chars.find(x=>x.id===current);
+  if(!ch)return;
+
+  busy=true;
+  document.getElementById("send").disabled=true;
+
+  state.chats[current].push({who:"me",text:message});
+  save();
+  renderMessages();
+  input.value="";
+  document.getElementById("chatStatus").textContent="Персонаж отвечает...";
+
+  try{
+    const response=await fetch(API+"/api/chat",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        message,
+        characterName:ch.name,
+        system:ch.system||ch.desc,
+        conversationId:getConversationId(current),
+        history:state.chats[current].map(m=>({
+          role:m.who==="me"?"user":"model",
+          parts:[{text:m.text}]
+        }))
+      })
+    });
+
+    const data=await response.json();
+    if(!response.ok)throw new Error(data.error||"Ошибка сервера");
+
+    const reply=data.reply||data.response||data.text;
+    if(!reply)throw new Error("Сервер не прислал ответ");
+
+    state.chats[current].push({who:"bot",text:reply});
+    save();
+    renderMessages();
+    document.getElementById("chatStatus").textContent="";
+
+  }catch(error){
+    document.getElementById("chatStatus").textContent="Ошибка: "+error.message;
+  }finally{
+    busy=false;
+    document.getElementById("send").disabled=false;
+  }
+});
+
+// Очистка чата
+document.getElementById("clearChat").addEventListener("click",()=>{
+  if(!current)return;
+  if(!confirm("Очистить переписку?"))return;
+  state.chats[current]=[];
+  save();
+  renderMessages();
+});
+
+// История чатов
+function renderHistory(){
+  const root=document.getElementById("historyList");
+  root.replaceChildren();
+
+  state.chars.forEach(ch=>{
+    const messages=state.chats[ch.id]||[];
+    if(!messages.length)return;
+
+    const card=document.createElement("div");
+    card.className="character";
+
+    const title=document.createElement("h3");
+    title.textContent=(ch.emoji||"🐾")+" "+ch.name;
+
+    const info=document.createElement("p");
+    info.textContent="Сообщений: "+messages.length;
+
+    const button=document.createElement("button");
+    button.textContent="Открыть чат";
+    button.onclick=()=>openChat(ch.id);
+
+    card.append(title,info,button);
+    root.append(card);
+  });
+
+  if(!root.children.length){
+    root.textContent="Пока нет сохранённых чатов.";
+  }
+}
+
+// Запуск приложения
+renderCards();
+updatePreview();
+showPage("catalog");
+
+</script>
+</body>
+</html>
