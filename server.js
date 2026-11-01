@@ -5,9 +5,11 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const API_KEY = process.env.GEMINI_API_KEY;
+
 const SUPABASE_URL = (process.env.SUPABASE_URL || "")
   .replace(/\/rest\/v1\/?$/, "")
   .replace(/\/+$/, "");
+
 const SUPABASE_KEY = process.env.SUPABASE_SECRET_KEY;
 
 const MODELS = [
@@ -16,18 +18,17 @@ const MODELS = [
   "gemini-3.5-flash"
 ];
 
-// Модель генерации изображений
-const IMAGE_MODEL = "gemini-nano-banana-2.1";
-
 app.use((req, res, next) => {
   res.setHeader(
     "Access-Control-Allow-Origin",
     "https://lesumehko-lang.github.io"
   );
+
   res.setHeader(
     "Access-Control-Allow-Methods",
     "GET, POST, OPTIONS"
   );
+
   res.setHeader(
     "Access-Control-Allow-Headers",
     "Content-Type"
@@ -78,16 +79,19 @@ async function saveMessages(rows) {
 
     if (!response.ok) {
       const errorText = await response.text();
+
       console.error(
         "Supabase save error:",
         response.status,
         errorText.slice(0, 1000)
       );
+
       return false;
     }
 
     console.log("Сообщения сохранены в Supabase.");
     return true;
+
   } catch (error) {
     console.error("Supabase connection error:", error.message);
     return false;
@@ -146,6 +150,7 @@ app.get("/api/history", async (req, res) => {
 
     if (!response.ok) {
       const errorText = await response.text();
+
       console.error(
         "Supabase history error:",
         response.status,
@@ -165,6 +170,7 @@ app.get("/api/history", async (req, res) => {
         parts: [{ text: row.content }]
       }))
     });
+
   } catch (error) {
     console.error("History error:", error.message);
 
@@ -319,6 +325,7 @@ app.post("/api/chat", async (req, res) => {
         ) {
           break;
         }
+
       } catch (error) {
         console.error(
           `Ошибка соединения ${model}:`,
@@ -366,6 +373,7 @@ app.post("/api/chat", async (req, res) => {
     }
 
     return res.json({ reply });
+
   } catch (error) {
     console.error("Chat error:", error);
 
@@ -376,7 +384,8 @@ app.post("/api/chat", async (req, res) => {
 });
 
 // =================================
-// ГЕНЕРАТОР ИЗОБРАЖЕНИЙ ФУРРИ
+// ГЕНЕРАТОР ИЗОБРАЖЕНИЙ
+// OVHCLOUD SDXL
 // =================================
 
 app.post("/api/image", async (req, res) => {
@@ -391,80 +400,58 @@ app.post("/api/image", async (req, res) => {
       });
     }
 
-    if (!API_KEY) {
-      return res.status(500).json({
-        error: "Не настроен ключ Gemini в Render."
-      });
-    }
-
     const prompt = [
-      "Create one original furry character illustration.",
-      "Anthropomorphic animal character, fully clothed,",
-      "non-sexual fantasy art.",
-      "Expressive face, detailed fur, beautiful colors,",
-      "polished digital illustration.",
+      "Original furry character illustration.",
+      "Anthropomorphic animal, fully clothed.",
+      "Friendly expressive face, detailed fur.",
+      "Beautiful colors, polished digital fantasy art.",
+      "No sexual content.",
       "Character description:",
       description
     ].join(" ");
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/${IMAGE_MODEL}:generateContent`,
+      "https://stable-diffusion-xl.endpoints.kepler.ai.cloud.ovh.net/api/text2image",
       {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": API_KEY
+          "Accept": "application/octet-stream",
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          contents: [{
-            parts: [{ text: prompt }]
-          }],
-          generationConfig: {
-            responseModalities: ["TEXT", "IMAGE"]
-          }
+          prompt,
+          negative_prompt: "blurry, low quality, distorted"
         }),
-        signal: AbortSignal.timeout(60000)
+        signal: AbortSignal.timeout(90000)
       }
     );
 
-    const data = await response.json();
-
     if (!response.ok) {
-      console.error(
-        "Gemini image error:",
-        data.error?.message || response.status
-      );
+      const errorText = await response.text();
+
+      console.error("OVHcloud image error:", errorText);
 
       return res.status(502).json({
-        error: "Не удалось создать картинку: " +
-          (data.error?.message || response.status)
+        error: "Сервис рисования временно недоступен: HTTP " +
+          response.status
       });
     }
 
-    const parts =
-      data.candidates?.[0]?.content?.parts || [];
-
-    const imagePart = parts.find(part =>
-      part.inlineData?.data ||
-      part.inline_data?.data
+    const imageBuffer = Buffer.from(
+      await response.arrayBuffer()
     );
 
-    if (!imagePart) {
+    if (!imageBuffer.length) {
       return res.status(502).json({
-        error: "Модель не вернула изображение."
+        error: "Сервис не вернул изображение."
       });
     }
 
-    const imageData =
-      imagePart.inlineData || imagePart.inline_data;
-
     return res.json({
-      image: imageData.data,
-      mimeType:
-        imageData.mimeType ||
-        imageData.mime_type ||
-        "image/png"
+      image: imageBuffer.toString("base64"),
+      mimeType: response.headers.get("content-type") || "image/jpeg"
     });
+
   } catch (error) {
     console.error("Image error:", error.message);
 
@@ -481,4 +468,4 @@ app.post("/api/image", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`AI Персонажи запущен на порту ${PORT}`);
 });
-        
+            
