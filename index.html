@@ -859,3 +859,362 @@ document.getElementById("furryForm")
   renderCards();
   openChat(id);
 });
+  // ИИ-генератор фурри
+document.getElementById("imageForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+
+  const name=document.getElementById("imageName").value.trim()||"Новый фурри";
+  const description=document.getElementById("imageDescription").value.trim();
+
+  if(!description)return;
+
+  const button=document.getElementById("generateImage");
+  const status=document.getElementById("imageStatus");
+  const result=document.getElementById("imageResult");
+
+  button.disabled=true;
+  status.textContent="🎨 Создаём изображение...";
+  result.classList.add("hidden");
+  generatedImageData=null;
+
+  try{
+    const response=await fetch(API+"/api/image",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        description:"Создай оригинального фурри-персонажа: "+description
+      })
+    });
+
+    const data=await response.json();
+
+    if(!response.ok){
+      throw new Error(data.error||"Ошибка генерации");
+    }
+
+    if(!data.image)throw new Error("Изображение не получено");
+
+    generatedImageData={
+      name,
+      description,
+      image:data.image,
+      mimeType:data.mimeType||"image/png"
+    };
+
+    document.getElementById("generatedImage").src=
+      "data:"+generatedImageData.mimeType+";base64,"+
+      generatedImageData.image;
+
+    result.classList.remove("hidden");
+    status.textContent="✅ Изображение готово!";
+
+  }catch(error){
+    status.textContent="❌ "+error.message;
+  }finally{
+    button.disabled=false;
+  }
+});
+
+// Скачать изображение
+document.getElementById("downloadImage").addEventListener("click",()=>{
+  if(!generatedImageData)return;
+
+  const link=document.createElement("a");
+  link.href="data:"+generatedImageData.mimeType+";base64,"+
+    generatedImageData.image;
+  link.download="furry-character.png";
+  link.click();
+});
+
+// Добавить фурри в каталог
+document.getElementById("addImageCharacter").addEventListener("click",()=>{
+  if(!generatedImageData)return;
+
+  const id="image_"+Date.now();
+
+  state.chars.push({
+    id,
+    name:generatedImageData.name,
+    emoji:"🐾",
+    desc:generatedImageData.description,
+    system:
+      "Ты фурри-персонаж по имени "+generatedImageData.name+
+      ". Твоя внешность: "+generatedImageData.description+
+      ". Общайся естественно и отвечай по-русски."
+  });
+
+  save();
+  renderCards();
+  generatedImageData=null;
+
+  document.getElementById("imageStatus").textContent=
+    "✅ Персонаж добавлен!";
+
+  document.getElementById("imageResult").classList.add("hidden");
+})
+// Генератор аниме-кошек
+document.getElementById("animeForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+
+  const name=document.getElementById("animeName").value.trim()||"Аниме-кошка";
+  const gender=document.getElementById("animeGender").value;
+  const fur=document.getElementById("animeFur").value;
+  const eyes=document.getElementById("animeEyes").value;
+  const hair=document.getElementById("animeHair").value;
+  const clothes=document.getElementById("animeClothes").value;
+  const emotion=document.getElementById("animeEmotion").value;
+  const extra=document.getElementById("animeExtra").value.trim();
+
+  const description=
+    gender+
+    ", шерсть: "+fur+
+    ", глаза: "+eyes+
+    ", причёска: "+hair+
+    ", одежда: "+clothes+
+    ", эмоция: "+emotion+
+    (extra?". Дополнительно: "+extra:"");
+
+  const button=document.getElementById("animeGenerate");
+  const status=document.getElementById("animeStatus");
+  const result=document.getElementById("animeResult");
+
+  button.disabled=true;
+  status.textContent="🌸 Создаём аниме-персонажа...";
+  result.classList.add("hidden");
+  animeImageData=null;
+
+  try{
+    const response=await fetch(API+"/api/image",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        description:
+          "Оригинальная иллюстрация в японском аниме-стиле. "+
+          description+
+          ". Качественный рисунок, выразительные глаза."
+      });
+    });
+
+    const data=await response.json();
+
+    if(!response.ok){
+      throw new Error(data.error||"Ошибка генерации");
+    }
+
+    if(!data.image)throw new Error("Изображение не получено");
+
+    animeImageData={
+      name,
+      gender,
+      description,
+      image:data.image,
+      mimeType:data.mimeType||"image/png"
+    };
+
+    document.getElementById("animeGeneratedImage").src=
+      "data:"+animeImageData.mimeType+";base64,"+
+      animeImageData.image;
+
+    result.classList.remove("hidden");
+    status.textContent="✅ Аниме-персонаж готов!";
+
+  }catch(error){
+    status.textContent="❌ "+error.message;
+  }finally{
+    button.disabled=false;
+  }
+});
+  // Сохранение аниме-картинки
+document.getElementById("animeDownload").addEventListener("click",()=>{
+  if(!animeImageData)return;
+
+  const link=document.createElement("a");
+
+  link.href=
+    "data:"+animeImageData.mimeType+";base64,"+
+    animeImageData.image;
+
+  link.download="anime-cat.png";
+  link.click();
+});
+
+// Добавление аниме-кошки в каталог
+document.getElementById("animeAddCharacter").addEventListener("click",()=>{
+  if(!animeImageData)return;
+
+  const id="anime_"+Date.now();
+
+  state.chars.push({
+    id,
+    name:animeImageData.name,
+    emoji:"🐱",
+    desc:animeImageData.description,
+
+    system:
+      "Ты аниме-персонаж, "+animeImageData.gender+
+      ", по имени "+animeImageData.name+
+      ". Твоя внешность: "+animeImageData.description+
+      ". Общайся естественно и отвечай по-русски.",
+
+    anime:{
+      gender:animeImageData.gender,
+      description:animeImageData.description
+    }
+  });
+
+  save();
+  renderCards();
+
+  animeImageData=null;
+
+  document.getElementById("animeStatus").textContent=
+    "✅ Аниме-персонаж добавлен в каталог!";
+
+  document.getElementById("animeResult").classList.add("hidden");
+});
+  // Отправка сообщений персонажам
+document.getElementById("chatForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+
+  const input=document.getElementById("message");
+  const message=input.value.trim();
+
+  if(!message||busy||!current)return;
+
+  const ch=state.chars.find(x=>x.id===current);
+  if(!ch)return;
+
+  busy=true;
+
+  const send=document.getElementById("send");
+  const status=document.getElementById("chatStatus");
+
+  send.disabled=true;
+
+  state.chats[current].push({
+    who:"me",
+    text:message
+  });
+
+  input.value="";
+  save();
+  renderMessages();
+
+  status.textContent="Персонаж печатает...";
+
+  try{
+    const conversationId=getConversationId(current);
+
+    const response=await fetch(API+"/api/chat",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        message,
+        character:ch.system,
+        characterName:ch.name,
+        conversationId
+      })
+    });
+
+    const data=await response.json();
+
+    if(!response.ok){
+      throw new Error(data.error||"Ошибка ответа ИИ");
+    }
+
+    if(!data.reply){
+      throw new Error("ИИ не прислал ответ");
+    }
+
+    state.chats[current].push({
+      who:"bot",
+      text:data.reply
+    });
+
+    save();
+    renderMessages();
+    status.textContent="";
+
+  }catch(error){
+    console.error(error);
+    status.textContent="❌ "+error.message;
+
+    state.chats[current].push({
+      who:"bot",
+      text:"Не получилось получить ответ. Попробуй ещё раз."
+    });
+
+    save();
+    renderMessages();
+
+  }finally{
+    busy=false;
+    send.disabled=false;
+    input.focus();
+  }
+});
+  // Очистка текущего чата
+document.getElementById("clearChat").addEventListener("click",()=>{
+  if(!current)return;
+
+  if(!confirm("Очистить переписку с этим персонажем?"))return;
+
+  state.chats[current]=[];
+
+  save();
+  openChat(current);
+});
+
+// История переписок
+function renderHistory(){
+  const root=document.getElementById("historyList");
+  root.replaceChildren();
+
+  const characters=state.chars.filter(ch=>
+    state.chats[ch.id]&&state.chats[ch.id].length
+  );
+
+  if(!characters.length){
+    const empty=document.createElement("p");
+    empty.className="muted";
+    empty.textContent="Пока нет переписок. Начни общение с персонажем!";
+    root.append(empty);
+    return;
+  }
+
+  characters.forEach(ch=>{
+    const card=document.createElement("div");
+    card.className="character";
+
+    const title=document.createElement("h3");
+    title.textContent=(ch.emoji||"🐾")+" "+ch.name;
+
+    const count=document.createElement("p");
+    count.textContent="Сообщений: "+state.chats[ch.id].length;
+
+    const last=document.createElement("p");
+    const lastMessage=state.chats[ch.id].at(-1);
+
+    last.textContent=lastMessage
+      ?lastMessage.text.slice(0,100)
+      :"Нет сообщений";
+
+    const button=document.createElement("button");
+    button.textContent="Продолжить чат";
+    button.onclick=()=>openChat(ch.id);
+
+    card.append(title,count,last,button);
+    root.append(card);
+  });
+}
+
+// Первоначальная загрузка приложения
+updatePreview();
+renderCards();
+renderHistory();
+
+showPage("catalog");
+
+</script>
+</body>
+</html>
