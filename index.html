@@ -191,6 +191,7 @@ label{display:block;color:#e1d3ff}
   <button type="button" onclick="showPage('history')">💬 Мои чаты</button>
   <button type="button" onclick="showPage('art')">🐾 Фурри</button>
   <button type="button" onclick="showPage('aiArt')">🎨 ИИ-рисование</button>
+  <button type="button" onclick="showPage('animeCats')">🌸 Аниме-кошки</button>
 </nav>
 
 <section id="catalog">
@@ -326,6 +327,117 @@ label{display:block;color:#e1d3ff}
   </div>
 </section>
 
+<!-- НОВЫЙ ГЕНЕРАТОР АНИМЕ-КОШЕК -->
+<section id="animeCats" class="hidden">
+  <h2>🌸 Генератор аниме-кошек</h2>
+  <p class="muted">
+    Создай своего аниме-персонажа: кота-мальчика или кошку-девочку!
+  </p>
+
+  <form id="animeForm">
+
+    <label>Имя персонажа</label>
+    <input id="animeName" maxlength="40" placeholder="Например, Мия">
+
+    <label>Кто это?</label>
+    <select id="animeGender">
+      <option value="кот-мальчик">🐱 Кот-мальчик</option>
+      <option value="кошка-девочка">🐱 Кошка-девочка</option>
+    </select>
+
+    <label>Цвет шерсти</label>
+    <select id="animeFur">
+      <option>Белая</option>
+      <option>Чёрная</option>
+      <option>Серая</option>
+      <option>Рыжая</option>
+      <option>Коричневая</option>
+      <option>Кремовая</option>
+      <option>Розовая</option>
+      <option>Голубая</option>
+      <option>Фиолетовая</option>
+      <option>Разноцветная</option>
+    </select>
+
+    <label>Цвет глаз</label>
+    <select id="animeEyes">
+      <option>Голубые</option>
+      <option>Зелёные</option>
+      <option>Фиолетовые</option>
+      <option>Красные</option>
+      <option>Жёлтые</option>
+      <option>Янтарные</option>
+      <option>Розовые</option>
+      <option>Серые</option>
+    </select>
+
+    <label>Причёска</label>
+    <select id="animeHair">
+      <option>Короткие пушистые волосы</option>
+      <option>Длинные волосы</option>
+      <option>Два хвостика</option>
+      <option>Чёлка и волосы до плеч</option>
+      <option>Взъерошенные волосы</option>
+      <option>Волосы с цветными прядями</option>
+      <option>Кудрявые волосы</option>
+      <option>Без человеческой причёски, только кошачья шерсть</option>
+    </select>
+
+    <label>Одежда</label>
+    <select id="animeClothes">
+      <option>Большое фиолетовое худи</option>
+      <option>Школьная форма в аниме-стиле</option>
+      <option>Чёрная куртка</option>
+      <option>Белый свитер</option>
+      <option>Розовое платье</option>
+      <option>Футболка и джинсы</option>
+      <option>Спортивная одежда</option>
+      <option>Фэнтези-костюм</option>
+      <option>Уличный стиль</option>
+    </select>
+
+    <label>Эмоция</label>
+    <select id="animeEmotion">
+      <option>Весёлая улыбка</option>
+      <option>Спокойное выражение лица</option>
+      <option>Смущённая улыбка</option>
+      <option>Удивление</option>
+      <option>Грусть</option>
+      <option>Уверенный взгляд</option>
+      <option>Сонное выражение лица</option>
+      <option>Задумчивость</option>
+    </select>
+
+    <label>Дополнительное описание</label>
+    <textarea id="animeExtra" maxlength="700"
+      placeholder="Например: пушистые кошачьи ушки, длинный хвост, звёздные заколки, красивый фон ночного города."></textarea>
+
+    <button id="animeGenerate" type="submit">
+      🌸 Нарисовать аниме-кошку
+    </button>
+  </form>
+
+  <p id="animeStatus" class="small"></p>
+
+  <div id="animeResult" class="hidden">
+    <h3>✨ Твой аниме-персонаж</h3>
+
+    <img id="animeGeneratedImage"
+      class="generated-image"
+      alt="Аниме-кошка">
+
+    <div class="image-actions">
+      <button type="button" id="animeDownload">
+        ⬇️ Сохранить картинку
+      </button>
+
+      <button type="button" id="animeAddCharacter">
+        🐱 Добавить в каталог
+      </button>
+    </div>
+  </div>
+</section>
+
 <section id="chatPage" class="hidden">
   <button type="button" onclick="showPage('catalog')">← К персонажам</button>
 
@@ -403,6 +515,7 @@ let state=load();
 let current=null;
 let busy=false;
 let generatedImageData=null;
+let animeImageData=null;
 
 function save(){
   try{
@@ -434,7 +547,8 @@ function showPage(id){
     "chatPage",
     "history",
     "art",
-    "aiArt"
+    "aiArt",
+    "animeCats"
   ];
 
   pages.forEach(page=>{
@@ -480,6 +594,13 @@ function renderCards(){
         ch.furry.animal+" · "+
         ch.furry.furColor+" шерсть";
 
+      card.append(details);
+    }
+
+    if(ch.anime){
+      const details=document.createElement("p");
+      details.textContent=
+        "🌸 Аниме-кошка · "+ch.anime.gender;
       card.append(details);
     }
 
@@ -738,220 +859,3 @@ document.getElementById("furryForm")
   renderCards();
   openChat(id);
 });
-
-// ИИ-генерация картинки
-document.getElementById("imageForm")
-.addEventListener("submit",async e=>{
-  e.preventDefault();
-
-  const description=
-    document.getElementById("imageDescription").value.trim();
-
-  const name=
-    document.getElementById("imageName").value.trim()||
-    "Мой фурри";
-
-  const button=document.getElementById("generateImage");
-  const status=document.getElementById("imageStatus");
-  const result=document.getElementById("imageResult");
-
-  if(!description)return;
-
-  generatedImageData=null;
-  result.classList.add("hidden");
-
-  button.disabled=true;
-  status.textContent=
-    "🎨 ИИ рисует персонажа. Это может занять некоторое время...";
-
-  try{
-    const response=await fetch(API+"/api/image",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({description})
-    });
-
-    const data=await response.json();
-
-    if(!response.ok){
-      throw new Error(data.error||"Ошибка генерации");
-    }
-
-    if(!data.image){
-      throw new Error("Сервер не вернул картинку.");
-    }
-
-    generatedImageData={
-      image:data.image,
-      mimeType:data.mimeType||"image/png",
-      name,
-      description
-    };
-
-    document.getElementById("generatedImage").src=
-      "data:"+generatedImageData.mimeType+
-      ";base64,"+generatedImageData.image;
-
-    result.classList.remove("hidden");
-    status.textContent="✅ Картинка готова!";
-
-  }catch(error){
-    status.textContent=
-      "Не удалось создать картинку: "+error.message;
-
-  }finally{
-    button.disabled=false;
-  }
-});
-
-// Сохранение картинки
-document.getElementById("downloadImage")
-.addEventListener("click",()=>{
-  if(!generatedImageData)return;
-
-  const link=document.createElement("a");
-
-  link.href=
-    "data:"+generatedImageData.mimeType+
-    ";base64,"+generatedImageData.image;
-
-  link.download="furry-"+Date.now()+".png";
-
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-});
-
-// Добавление ИИ-персонажа в каталог
-document.getElementById("addImageCharacter")
-.addEventListener("click",()=>{
-  if(!generatedImageData)return;
-
-  const id="ai_furry_"+Date.now();
-  const name=generatedImageData.name;
-  const description=generatedImageData.description;
-
-  state.chars.push({
-    id,
-    name,
-    emoji:"🐾",
-    desc:description,
-    system:
-      "Ты виртуальный фурри-персонаж по имени "+name+
-      ". Твоё описание: "+description+
-      ". Оставайся в роли персонажа, отвечай по-русски и безопасно."
-  });
-
-  save();
-  renderCards();
-
-  alert("Персонаж добавлен в каталог!");
-  showPage("catalog");
-});
-
-// Отправка сообщений в чат
-document.getElementById("chatForm")
-.addEventListener("submit",async e=>{
-  e.preventDefault();
-
-  if(busy||!current)return;
-
-    const input=document.getElementById("message");
-  const message=input.value.trim();
-  if(!message)return;
-
-  const ch=state.chars.find(x=>x.id===current);
-  if(!ch)return;
-
-  busy=true;
-  document.getElementById("send").disabled=true;
-
-  state.chats[current].push({who:"me",text:message});
-  save();
-  renderMessages();
-  input.value="";
-  document.getElementById("chatStatus").textContent="Персонаж отвечает...";
-
-  try{
-    const response=await fetch(API+"/api/chat",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        message,
-        characterName:ch.name,
-        system:ch.system||ch.desc,
-        conversationId:getConversationId(current),
-        history:state.chats[current].map(m=>({
-          role:m.who==="me"?"user":"model",
-          parts:[{text:m.text}]
-        }))
-      })
-    });
-
-    const data=await response.json();
-    if(!response.ok)throw new Error(data.error||"Ошибка сервера");
-
-    const reply=data.reply||data.response||data.text;
-    if(!reply)throw new Error("Сервер не прислал ответ");
-
-    state.chats[current].push({who:"bot",text:reply});
-    save();
-    renderMessages();
-    document.getElementById("chatStatus").textContent="";
-
-  }catch(error){
-    document.getElementById("chatStatus").textContent="Ошибка: "+error.message;
-  }finally{
-    busy=false;
-    document.getElementById("send").disabled=false;
-  }
-});
-
-// Очистка чата
-document.getElementById("clearChat").addEventListener("click",()=>{
-  if(!current)return;
-  if(!confirm("Очистить переписку?"))return;
-  state.chats[current]=[];
-  save();
-  renderMessages();
-});
-
-// История чатов
-function renderHistory(){
-  const root=document.getElementById("historyList");
-  root.replaceChildren();
-
-  state.chars.forEach(ch=>{
-    const messages=state.chats[ch.id]||[];
-    if(!messages.length)return;
-
-    const card=document.createElement("div");
-    card.className="character";
-
-    const title=document.createElement("h3");
-    title.textContent=(ch.emoji||"🐾")+" "+ch.name;
-
-    const info=document.createElement("p");
-    info.textContent="Сообщений: "+messages.length;
-
-    const button=document.createElement("button");
-    button.textContent="Открыть чат";
-    button.onclick=()=>openChat(ch.id);
-
-    card.append(title,info,button);
-    root.append(card);
-  });
-
-  if(!root.children.length){
-    root.textContent="Пока нет сохранённых чатов.";
-  }
-}
-
-// Запуск приложения
-renderCards();
-updatePreview();
-showPage("catalog");
-
-</script>
-</body>
-</html>
