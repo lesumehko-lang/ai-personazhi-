@@ -461,11 +461,90 @@ app.post("/api/image", async (req, res) => {
   }
 });
 
+
 // =================================
-// ЗАПУСК СЕРВЕРА
+// ОТДЕЛЬНЫЙ ГЕНЕРАТОР АНИМЕ-КОШЕК
+// ANIMEAPI FREE DEMO
 // =================================
 
-app.listen(PORT, () => {
-  console.log(`AI Персонажи запущен на порту ${PORT}`);
+app.post("/api/anime-cat", async (req, res) => {
+  try {
+    const description = String(
+      req.body?.description || ""
+    ).trim();
+
+    if (!description || description.length > 450) {
+      return res.status(400).json({
+        error: "Опиши кошачьего персонажа (до 450 символов)."
+      });
+    }
+
+    const prompt = [
+      "High quality original Japanese anime character illustration.",
+      "Human anime character with a human face and human body.",
+      "Clearly visible cat ears and a cat tail.",
+      "NOT furry, NOT anthropomorphic animal.",
+      "No animal muzzle, no animal face, no fur-covered body.",
+      "Fully clothed, friendly, age-appropriate character.",
+      description
+    ].join(" ");
+
+    const response = await fetch(
+      "https://animeapi.ai/api/demo/generate",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          prompt
+        }),
+        signal: AbortSignal.timeout(90000)
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        error: data?.error || "Бесплатный генератор временно недоступен.",
+        remaining: data?.demo_remaining
+      });
+    }
+
+    if (!data.image_url) {
+      return res.status(502).json({
+        error: "Генератор не вернул изображение."
+      });
+    }
+
+    const imageResponse = await fetch(data.image_url, {
+      signal: AbortSignal.timeout(30000)
+    });
+
+    if (!imageResponse.ok) {
+      return res.status(502).json({
+        error: "Не удалось загрузить готовую картинку."
+      });
+    }
+
+    const imageBuffer = Buffer.from(
+      await imageResponse.arrayBuffer()
+    );
+
+    return res.json({
+      image: imageBuffer.toString("base64"),
+      mimeType: imageResponse.headers.get("content-type") || "image/webp",
+      remaining: data.demo_remaining
+    });
+
+  } catch (error) {
+    console.error("Anime cat error:", error.message);
+
+    return res.status(500).json({
+      error: "Ошибка генератора кошек."
+    });
+  }
 });
+
             
