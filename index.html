@@ -584,9 +584,11 @@ document.getElementById("femboyDownload").addEventListener("click",()=>{
   const a=document.createElement("a");a.href="data:"+femboyImageData.mimeType+";base64,"+femboyImageData.image;a.download="femboy-character.png";a.click();
 });
 
-// Генератор аниме-кошек
+// Генератор картинок 
+  
 document.getElementById("animeForm").addEventListener("submit",async e=>{
   e.preventDefault();
+
   const name=document.getElementById("animeName").value.trim()||"Аниме-кошка";
   const gender=document.getElementById("animeGender").value;
   const fur=document.getElementById("animeFur").value;
@@ -595,22 +597,64 @@ document.getElementById("animeForm").addEventListener("submit",async e=>{
   const clothes=document.getElementById("animeClothes").value;
   const emotion=document.getElementById("animeEmotion").value;
   const extra=document.getElementById("animeExtra").value.trim();
-  const description=gender+", шерсть: "+fur+", глаза: "+eyes+", причёска: "+hair+", одежда: "+clothes+", эмоция: "+emotion+(extra?". Дополнительно: "+extra:"");
+
+  const description=
+    gender+
+    ", цвет кошачьих ушей и хвоста: "+fur+
+    ", глаза: "+eyes+
+    ", причёска: "+hair+
+    ", одежда: "+clothes+
+    ", эмоция: "+emotion+
+    (extra?". Дополнительно: "+extra:"");
+
   const button=document.getElementById("animeGenerate");
   const status=document.getElementById("animeStatus");
   const result=document.getElementById("animeResult");
-  button.disabled=true;status.textContent="🌸 Создаём аниме-персонажа...";result.classList.add("hidden");animeImageData=null;
+
+  button.disabled=true;
+  status.textContent="🌸 Создаём аниме-кошку...";
+  result.classList.add("hidden");
+  animeImageData=null;
+
   try{
-    const response=await fetch(API+"/api/image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:"Оригинальная иллюстрация в японском аниме-стиле. "+description+". Качественный рисунок, выразительные глаза."})});
+    const response=await fetch(API+"/api/anime-cat",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({description})
+    });
+
     const data=await response.json();
-    if(!response.ok)throw new Error(data.error||"Ошибка генерации");
-    if(!data.image)throw new Error("Изображение не получено");
-    animeImageData={name,gender,description,image:data.image,mimeType:data.mimeType||"image/png"};
-    document.getElementById("animeGeneratedImage").src="data:"+animeImageData.mimeType+";base64,"+animeImageData.image;
-    result.classList.remove("hidden");status.textContent="✅ Аниме-персонаж готов!";
-  }catch(error){status.textContent="❌ "+error.message;}
-  finally{button.disabled=false;}
+
+    if(!response.ok){
+      throw new Error(data.error||"Ошибка генерации");
+    }
+
+    if(!data.image){
+      throw new Error("Изображение не получено");
+    }
+
+    animeImageData={
+      name,
+      gender,
+      description,
+      image:data.image,
+      mimeType:data.mimeType||"image/webp"
+    };
+
+    document.getElementById("animeGeneratedImage").src=
+      "data:"+animeImageData.mimeType+";base64,"+animeImageData.image;
+
+    result.classList.remove("hidden");
+    status.textContent="✅ Аниме-кошка готова!";
+
+  }catch(error){
+    console.error("Anime cat error:",error);
+    status.textContent="❌ "+error.message;
+  }finally{
+    button.disabled=false;
+  }
 });
+  
 
 // Сохранение аниме-картинки
 document.getElementById("animeDownload").addEventListener("click",()=>{
