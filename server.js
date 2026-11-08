@@ -475,31 +475,42 @@ app.post("/api/anime-cat", async (req, res) => {
 
     if (!description || description.length > 450) {
       return res.status(400).json({
-        error: "Опиши кошачьего персонажа (до 450 символов)."
+        error: "Опиши персонажа (до 450 символов)."
+      });
+    }
+
+    const key = process.env.ANIMEAPI_KEY;
+
+    if (!key) {
+      return res.status(500).json({
+        error: "ANIMEAPI_KEY не настроен в Render."
       });
     }
 
     const prompt = [
-      "High quality original Japanese anime character illustration.",
-      "Human anime character with a human face and human body.",
-      "Clearly visible cat ears and a cat tail.",
-      "NOT furry, NOT anthropomorphic animal.",
-      "No animal muzzle, no animal face, no fur-covered body.",
-      "Fully clothed, friendly, age-appropriate character.",
+      "High quality Japanese anime character.",
+      "Human face and human body.",
+      "Clearly visible cat ears and cat tail.",
+      "Not furry, no animal muzzle.",
+      "Fully clothed, friendly character.",
       description
     ].join(" ");
 
     const response = await fetch(
-      "https://animeapi.ai/api/demo/generate",
+      "https://animeapi.ai/api/generate",
       {
         method: "POST",
         headers: {
+          "Authorization": `Bearer ${key}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          prompt
+          prompt,
+          model: "anime",
+          orientation: "portrait",
+          allowNSFW: false
         }),
-        signal: AbortSignal.timeout(90000)
+        signal: AbortSignal.timeout(120000)
       }
     );
 
@@ -507,24 +518,21 @@ app.post("/api/anime-cat", async (req, res) => {
 
     if (!response.ok) {
       return res.status(response.status).json({
-        error: data?.error || "Бесплатный генератор временно недоступен.",
-        remaining: data?.demo_remaining
+        error: data.error || "Ошибка AnimeAPI."
       });
     }
 
     if (!data.image_url) {
       return res.status(502).json({
-        error: "Генератор не вернул изображение."
+        error: "AnimeAPI не вернул изображение."
       });
     }
 
-    const imageResponse = await fetch(data.image_url, {
-      signal: AbortSignal.timeout(30000)
-    });
+    const imageResponse = await fetch(data.image_url);
 
     if (!imageResponse.ok) {
       return res.status(502).json({
-        error: "Не удалось загрузить готовую картинку."
+        error: "Не удалось загрузить картинку."
       });
     }
 
@@ -534,19 +542,15 @@ app.post("/api/anime-cat", async (req, res) => {
 
     return res.json({
       image: imageBuffer.toString("base64"),
-      mimeType: imageResponse.headers.get("content-type") || "image/webp",
-      remaining: data.demo_remaining
+      mimeType: imageResponse.headers.get("content-type") || "image/webp"
     });
 
   } catch (error) {
     console.error("Anime cat error:", error.message);
 
     return res.status(500).json({
-      error: "Ошибка генератора кошек."
+      error: "Ошибка генератора аниме-кошек."
     });
   }
-});app.listen(PORT, "0.0.0.0", () => {
-  console.log(`AI Персонажи запущен на порту ${PORT}`);
 });
-
             
