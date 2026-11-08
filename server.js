@@ -545,6 +545,8 @@ app.post("/api/anime-cat", async (req, res) => {
       error: "Ошибка генератора кошек."
     });
   }
+});app.listen(PORT, "0.0.0.0", () => {
+  console.log(`AI Персонажи запущен на порту ${PORT}`);
 });
 
             
